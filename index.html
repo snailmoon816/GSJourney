@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>浮旅歌行 Astrawander Log</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-color: #070d19;
+            --card-bg: #0f192e;
+            --border-color: #1b2a47;
+            --text-main: #ffffff;
+            --text-muted: #5e739c;
+            --accent-gold: #f4d068;
+            --accent-blue: #38bdf8;
+            --btn-selected: #162c52;
+            --danger: #e74c3c;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        body { background-color: #02060f; color: var(--text-main); display: flex; justify-content: center; padding: 20px; }
+
+        .phone-container {
+            width: 100%; max-width: 414px; background-color: var(--bg-color);
+            min-height: 850px; border: 1px solid var(--border-color);
+            border-radius: 24px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.6);
+            display: flex; flex-direction: column;
+        }
+
+        /* Header */
+        .header { padding: 24px 18px 10px; border-bottom: 1px solid var(--border-color); background: var(--bg-color); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+        .title { font-size: 19px; font-weight: 600; display: flex; align-items: center; gap: 6px; letter-spacing: 1px; }
+        .title::before { content: "✦"; color: var(--accent-gold); }
+        .subtitle { font-size: 11px; color: var(--text-muted); letter-spacing: 1px; margin-left: 5px; font-weight: normal; }
+        .date-display { font-size: 11px; color: var(--text-muted); text-align: right; line-height: 1.4; }
+
+        /* Navigation */
+        .nav-tabs { display: flex; justify-content: space-around; border-bottom: 1px solid rgba(27, 42, 71, 0.5); }
+        .tab { color: var(--text-muted); font-size: 14px; padding: 10px 0; cursor: pointer; position: relative; background: none; border: none; width: 25%; text-align: center; outline: none; transition: color 0.2s; }
+        .tab.active { color: var(--accent-gold); font-weight: bold; }
+        .tab.active::after { content: ""; position: absolute; bottom: -1px; left: 15%; width: 70%; height: 2px; background-color: var(--accent-gold); }
+
+        /* Main Content Views */
+        .view-content { padding: 16px; display: none; flex: 1; overflow-y: auto; }
+        .view-content.active { display: flex; flex-direction: column; }
+
+        /* Card Base */
+        .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 16px; margin-bottom: 16px; }
+        .card-title { font-size: 14px; color: var(--text-main); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; font-weight: bold; }
+
+        /* Form elements */
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color);
+            border-radius: 8px; color: white; padding: 10px 12px; font-size: 13px; outline: none; margin-top: 5px; transition: border 0.2s;
+        }
+        input:focus, textarea:focus { border-color: var(--text-muted); }
+        textarea { height: 90px; resize: none; }
+        
+        .form-row { display: flex; align-items: center; margin-bottom: 12px; gap: 10px; }
+        .form-row:last-child { margin-bottom: 0; }
+        .form-row label { font-size: 13px; color: var(--text-muted); min-width: 75px; flex-shrink: 0; }
+
+        /* 今日行程與動態新增 */
+        .input-with-btn { display: flex; gap: 8px; margin-top: 12px; }
+        .input-with-btn input { margin-top: 0; }
+        .btn-plus { background: var(--btn-selected); border: 1px solid var(--border-color); color: var(--accent-blue); width: 38px; height: 38px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+
+        /* Section: Today Account Records */
+        .account-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .account-col { border-left: 1px solid var(--border-color); padding-left: 12px; }
+        .account-col:first-child { border-left: none; padding-left: 0; }
+        .account-name { font-size: 13px; margin-bottom: 10px; font-weight: bold; }
+        .name-aether { color: var(--accent-blue); }
+        .name-lumine { color: var(--accent-gold); }
+        
+        .primogem-input-wrap { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; margin-bottom: 12px; }
+        .primogem-input-wrap span { font-size: 12px; color: var(--text-muted); }
+        .primogem-input-wrap input { background: none; border: none; color: white; text-align: right; width: 70px; font-size: 13px; outline: none; margin-top: 0; padding: 0; font-weight: bold; }
+
+        .checkbox-group { display: flex; flex-direction: column; gap: 8px; }
+        .checkbox-label { font-size: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; cursor: pointer; }
+        .checkbox-label input { accent-color: var(--accent-blue); }
+
+        /* Section: Tags */
+        .tag-pool { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag { background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); color: var(--text-muted); padding: 6px 14px; border-radius: 20px; font-size: 12px; cursor: pointer; user-select: none; transition: 0.2s; }
+        .tag.selected { background-color: var(--btn-selected); border-color: var(--accent-blue); color: white; }
+
+        /* Image Upload Gallery */
+        .image-gallery { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 5px; margin-bottom: 10px; }
+        .upload-btn-label { width: 100px; height: 100px; border: 1px dashed var(--border-color); border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-muted); cursor: pointer; font-size: 11px; gap: 6px; flex-shrink: 0; background: rgba(0,0,0,0.1); }
+        .img-container { position: relative; width: 130px; height: 90px; flex-shrink: 0; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+        .img-container img { width: 100%; height: 100%; object-fit: cover; }
+        .img-delete { position: absolute; top: 4px; right: 4px; background: var(--danger); color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2; }
+
+        /* Report Layout Component */
+        .report-month-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .report-month-header button { background: #16223d; border: none; color: var(--text-muted); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        
+        .report-diff-card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 24px 16px; text-align: center; margin-bottom: 16px; position: relative; }
+        .report-diff-line { width: 40px; height: 3px; background-color: var(--accent-gold); margin: 0 auto 14px; border-radius: 2px; }
+        .report-diff-title { font-size: 12px; color: var(--text-muted); margin-bottom: 8px; letter-spacing: 0.5px; }
+        .report-diff-values { font-size: 14px; display: flex; justify-content: center; gap: 14px; }
+        .report-diff-values span { font-weight: bold; }
+        .diff-aether { color: var(--accent-blue); }
+        .diff-lumine { color: var(--accent-gold); }
+
+        .report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .report-box { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; text-align: center; }
+        .report-num { font-size: 24px; color: var(--accent-gold); font-weight: bold; margin-bottom: 4px; }
+        .report-label { font-size: 11px; color: var(--text-muted); }
+
+        /* Settings System */
+        .settings-btn { width: 100%; padding: 14px; margin-bottom: 12px; border-radius: 10px; background: rgba(255,255,255,0.02); border: 1px solid var(--border-color); color: white; text-align: left; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 10px; }
+        .settings-btn.danger { color: var(--danger); border-color: rgba(231,76,60,0.2); }
+
+        /* Save Button */
+        .btn-submit { width: 100%; background: #2251a3; border: none; color: white; padding: 14px; border-radius: 25px; font-size: 15px; cursor: pointer; font-weight: bold; margin-top: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(34,81,163,0.3); }
+
+        /* 月曆核心 Style */
+        .calendar-ctrl { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .calendar-ctrl button { background: #16223d; border: none; color: var(--text-muted); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .calendar-title { font-size: 16px; font-weight: bold; color: var(--text-main); letter-spacing: 1px; }
+        
+        .calendar-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; margin-bottom: 12px; }
+        .calendar-weekdays div { font-size: 12px; color: var(--text-muted); }
+        
+        .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
+        .calendar-day-box { 
+            aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 13px; position: relative; cursor: pointer; color: #324566;
+        }
+        .calendar-day-box.current-month { color: #9bb2dc; }
+        .calendar-day-box.today { background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.3); color: var(--accent-blue); font-weight: bold; }
+        .calendar-day-box.selected-day { background: #2251a3 !important; color: white !important; border-radius: 8px; font-weight: bold; }
+        .calendar-day-box .dot-mark { position: absolute; bottom: 2px; font-size: 8px; color: var(--accent-gold); }
+
+        /* 最近旅途小卡 */
+        .recent-headline { font-size: 14px; color: var(--accent-gold); margin: 15px 0 10px; display: flex; align-items: center; gap: 6px; }
+        .recent-banner { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 14px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+        .recent-info { display: flex; flex-direction: column; gap: 4px; width: 90%; }
+        .recent-date-badge { font-size: 12px; color: var(--accent-gold); font-weight: bold; }
+        .recent-title-text { font-size: 13px; color: white; margin: 2px 0; }
+        .recent-gems-sub { font-size: 11px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <div class="header">
+        <div class="header-top">
+            <div class="title">浮旅歌行<span class="subtitle">ASTRAWANDER LOG</span></div>
+            <div class="date-display" id="header-date-text">2026年5月20日<br>星期三</div>
+        </div>
+        <div class="nav-tabs">
+            <button class="tab active" onclick="switchTab('calendar')">月曆</button>
+            <button class="tab" onclick="switchTab('today')">今日</button>
+            <button class="tab" onclick="switchTab('report')">月報</button>
+            <button class="tab" onclick="switchTab('settings')">設定</button>
+        </div>
+    </div>
+
+    <div id="view-calendar" class="view-content active">
+        <div class="card" style="padding: 20px 14px; margin-bottom: 10px;">
+            <div class="calendar-ctrl">
+                <button onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                <div class="calendar-title" id="cal-month-title">2026 · 五月</div>
+                <button onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="calendar-weekdays">
+                <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+            </div>
+            <div class="calendar-days" id="cal-days-grid"></div>
+        </div>
+
+        <div class="recent-headline">✦ 最近旅途</div>
+        <div id="recent-banner-area"></div>
+    </div>
+
+    <div id="view-today" class="view-content">
+        <div style="display:flex; justify-content: space-between; margin-bottom:14px; gap:10px;">
+            <button id="log-date-badge" onclick="switchTab('calendar')" style="background: #2251a3; border:none; color:white; font-size:12px; font-weight:bold; padding: 8px 14px; border-radius:8px; cursor:pointer;">2026-05-20 週三</button>
+            <input type="text" id="log-title" value="6.6開打啦！" style="background:rgba(255,255,255,0.05); border:1px solid var(--border-color); color:white; font-size:14px; border-radius:8px; padding:0 12px; flex:1; margin:0;">
+            <button onclick="deleteCurrentDayLog()" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:15px; padding: 0 5px;"><i class="fa-regular fa-trash-can"></i></button>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-gem" style="color:var(--accent-blue)"></i> 雙帳號紀錄</div>
+            <div class="account-grid">
+                <div class="account-col">
+                    <div class="account-name name-aether">空 · Aether</div>
+                    <div class="primogem-input-wrap">
+                        <span>今日原石</span>
+                        <input type="number" id="g-aether" value="9898">
+                    </div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label"><input type="checkbox" id="task-a-1"> 每日委託</label>
+                        <label class="checkbox-label"><input type="checkbox" id="task-a-2"> 千星奇域</label>
+                    </div>
+                </div>
+                <div class="account-col">
+                    <div class="account-name name-lumine">熒 · Lumine</div>
+                    <div class="primogem-input-wrap">
+                        <span>今日原石</span>
+                        <input type="number" id="g-lumine" value="6798">
+                    </div>
+                    <div class="checkbox-group">
+                        <label class="checkbox-label"><input type="checkbox" id="task-l-1"> 每日委託</label>
+                        <label class="checkbox-label"><input type="checkbox" id="task-l-2"> 千星奇域</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-regular fa-clipboard"></i> 今日行程</div>
+            <div class="tag-pool" id="tag-container">
+                <div class="tag" data-val="魔神任務">魔神任務</div>
+                <div class="tag" data-val="世界任務">世界任務</div>
+                <div class="tag" data-val="邀約任務">邀約任務</div>
+                <div class="tag" data-val="七聖召喚">七聖召喚</div>
+                <div class="tag" data-val="料理">料理</div>
+                <div class="tag" data-val="採集">採集</div>
+                <div class="tag" data-val="練角色">練角色</div>
+                <div class="tag" data-val="塵歌壺">塵歌壺</div>
+                <div class="tag" data-val="探索">探索</div>
+            </div>
+            <div class="input-with-btn">
+                <input type="text" id="custom-tag-input" placeholder="其他...">
+                <button class="btn-plus" onclick="addCustomTag()"><i class="fa-solid fa-plus"></i></button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-regular fa-image"></i> 截圖 · 旅途照</div>
+            <div class="image-gallery">
+                <div id="image-preview-area" style="display:flex; gap:12px;"></div>
+                <label class="upload-btn-label">
+                    <i class="fa-solid fa-plus"></i> 上傳截圖
+                    <input type="file" id="img-upload" accept="image/*" style="display:none;" onchange="handleImageUpload(this)">
+                </label>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-regular fa-pen-to-square"></i> 今日 · 記事</div>
+            <textarea id="note-daily" placeholder="今天跑了什麼、遇到什麼劇情、推角發言、日常碎念..."></textarea>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-wand-sparkles" style="color:var(--accent-gold)"></i> 劇情 · 心得</div>
+            <textarea id="note-story" placeholder="原神劇情感想、活動心得、動漫、漫畫、同人文..."></textarea>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-bolt" style="color:var(--accent-gold)"></i> 今日推角時刻</div>
+            <div class="form-row">
+                <label>最喜歡的台詞</label>
+                <input type="text" id="fav-line" placeholder="今天最有感的一句...">
+            </div>
+            <div class="form-row" style="align-items: flex-start;">
+                <label style="margin-top:8px;">最有感的一幕</label>
+                <textarea id="fav-scene" placeholder="你們今天一起做了什麼..." style="height:60px;"></textarea>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-gavel"></i> 今日養成</div>
+            <div class="tag-pool" id="build-tags" style="margin-bottom:12px;">
+                <div class="tag" data-val="天賦">天賦</div>
+                <div class="tag" data-val="武器">武器</div>
+                <div class="tag" data-val="聖遺物">聖遺物</div>
+                <div class="tag" data-val="突破">突破</div>
+            </div>
+            <div class="form-row">
+                <label>練了誰</label>
+                <input type="text" id="build-target" placeholder="角色名稱...">
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title"><i class="fa-regular fa-map"></i> 今日探索</div>
+            <div class="form-row">
+                <label>探索地區</label>
+                <input type="text" id="explore-area" placeholder="須彌 / 楓丹 / 納塔...">
+            </div>
+            <div class="form-row">
+                <label>地圖進度</label>
+                <input type="text" id="explore-percentage" placeholder="百分比或備註...">
+            </div>
+        </div>
+
+        <button class="btn-submit" onclick="saveData()">✦ 儲存今日旅途</button>
+    </div>
+
+    <div id="view-report" class="view-content">
+        <div class="report-month-header">
+            <button onclick="changeReportMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="calendar-title" id="report-month-title">2026 · 五月</div>
+            <button onclick="changeReportMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+
+        <div class="report-diff-card">
+            <div class="report-diff-line"></div>
+            <div class="report-diff-title">本月原石增減</div>
+            <div class="report-diff-values">
+                <span class="diff-aether" id="rep-diff-aether">空 —</span>
+                <span class="diff-lumine" id="rep-diff-lumine">熒 —</span>
+            </div>
+        </div>
+
+        <div class="report-grid">
+            <div class="report-box">
+                <div class="report-num" id="rep-aether">0</div>
+                <div class="report-label">空 · 月底原石</div>
+            </div>
+            <div class="report-box">
+                <div class="report-num" id="rep-lumine">0</div>
+                <div class="report-label">熒 · 月底原石</div>
+            </div>
+            <div class="report-box">
+                <div class="report-num" id="rep-days">0</div>
+                <div class="report-label">旅途第幾天 (自2021/01/22)</div>
+            </div>
+            <div class="report-box">
+                <div class="report-num" id="rep-total-logs">0</div>
+                <div class="report-label">已記錄天數</div>
+            </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+            <div class="card-title">📊 本月最常做的事</div>
+            <div class="tag-pool" id="rep-top-tags"></div>
+        </div>
+    </div>
+
+    <div id="view-settings" class="view-content">
+        <div class="card" style="background:none; border:none; padding:0;">
+            <div class="card-title" style="color:var(--accent-gold); margin-bottom:15px;">✦ 資料管理</div>
+            <button class="settings-btn" onclick="exportJSON()">
+                <i class="fa-solid fa-box-open" style="color:var(--accent-gold)"></i> 匯出備份 (JSON)
+            </button>
+            <label class="settings-btn" style="margin-top:0; font-weight:normal;">
+                <i class="fa-solid fa-cloud-arrow-down" style="color:var(--accent-blue)"></i> 點擊選擇檔案還原備份 (JSON)
+                <input type="file" id="import-file" accept=".json" style="display:none;" onchange="importJSON(this)">
+            </label>
+            <button class="settings-btn danger" onclick="clearAllData()">
+                <i class="fa-solid fa-trash-can"></i> 清除所有資料
+            </button>
+        </div>
+
+        <div class="card" style="background:none; border:none; padding:0; margin-top:10px;">
+            <div class="card-title" style="color:var(--accent-gold); margin-bottom:10px;">✦ 關於</div>
+            <p style="font-size:12px; color:var(--text-muted); line-height:1.8;">
+                浮旅歌行 · AstraWander Log<br>
+                一款專為原神玩家設計的每日旅途小報型紀錄 APP<br><br>
+                製作者：蝸牛月（snailmoon）/ 立春與風（gsxiao99）<br><br>
+                所有資料儲存於本地瀏覽器 (localStorage)。
+            </p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentSystemDate = new Date(); 
+    let selectedDateStr = formatDate(currentSystemDate); 
+    let calendarViewDate = new Date(currentSystemDate.getFullYear(), currentSystemDate.getMonth(), 1); 
+    let reportViewDate = new Date(currentSystemDate.getFullYear(), currentSystemDate.getMonth(), 1); 
+    let uploadedImages = [];
+    const weekDaysArr = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"];
+
+    document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById('header-date-text').innerHTML = `2026年5月20日<br>星期三`;
+        
+        document.getElementById('tag-container').addEventListener('click', toggleTagEvent);
+        document.getElementById('build-tags').addEventListener('click', toggleTagEvent);
+
+        loadData(selectedDateStr);
+        renderCalendar();
+    });
+
+    function toggleTagEvent(e) {
+        if(e.target.classList.contains('tag')) e.target.classList.toggle('selected');
+    }
+
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.view-content').forEach(view => view.classList.remove('active'));
+        
+        const targetTab = Array.from(document.querySelectorAll('.tab')).find(t => t.getAttribute('onclick').includes(tabName));
+        if(targetTab) targetTab.classList.add('active');
+        
+        document.getElementById(`view-${tabName}`).classList.add('active');
+
+        if(tabName === 'report') calculateReport();
+        if(tabName === 'calendar') renderCalendar();
+    }
+
+    function formatDate(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function getWeekDayStr(dateStr) {
+        if (!dateStr.includes('-') && dateStr.length === 8) {
+            dateStr = `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)}`;
+        }
+        const d = new Date(dateStr);
+        return isNaN(d.getTime()) ? "週三" : weekDaysArr[d.getDay()];
+    }
+
+    // ==================== 月曆與最近小卡邏輯 ====================
+    function renderCalendar() {
+        const year = calendarViewDate.getFullYear();
+        const month = calendarViewDate.getMonth();
+        const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
+        
+        document.getElementById('cal-month-title').innerText = `${year} · ${monthNames[month]}`;
+        const grid = document.getElementById('cal-days-grid');
+        grid.innerHTML = '';
+
+        const firstDayIndex = new Date(year, month, 1).getDay();
+        const totalDays = new Date(year, month + 1, 0).getDate();
+        const prevTotalDays = new Date(year, month, 0).getDate();
+
+        for (let i = firstDayIndex; i > 0; i--) {
+            grid.appendChild(createCellElement(prevTotalDays - i + 1, false));
+        }
+
+        const todayStr = formatDate(currentSystemDate);
+        for (let i = 1; i <= totalDays; i++) {
+            const thisDateStr = formatDate(new Date(year, month, i));
+            const isToday = (thisDateStr === todayStr);
+            grid.appendChild(createCellElement(i, true, thisDateStr, isToday));
+        }
+
+        const nextDaysNeeded = 42 - (firstDayIndex + totalDays);
+        for (let i = 1; i <= nextDaysNeeded; i++) {
+            grid.appendChild(createCellElement(i, false));
+        }
+
+        renderRecentBanner();
+    }
+
+    function createCellElement(dayNum, isCurrentMonth, dateStr = '', isToday = false) {
+        const cell = document.createElement('div');
+        cell.classList.add('calendar-day-box');
+        if (isCurrentMonth) {
+            cell.classList.add('current-month');
+            if (isToday) cell.classList.add('today');
+            if (dateStr === selectedDateStr) cell.classList.add('selected-day');
+            cell.innerText = dayNum;
+
+            if (localStorage.getItem(`astra_log_${dateStr}`)) {
+                const dot = document.createElement('span');
+                dot.classList.add('dot-mark');
+                dot.innerText = '✦';
+                cell.appendChild(dot);
+            }
+
+            cell.onclick = () => {
+                selectedDateStr = dateStr;
+                loadData(selectedDateStr);
+                switchTab('today');
+            };
+        }
+        return cell;
+    }
+
+    function changeMonth(dir) {
+        calendarViewDate.setMonth(calendarViewDate.getMonth() + dir);
+        renderCalendar();
+    }
+
+    function renderRecentBanner() {
+        const area = document.getElementById('recent-banner-area');
+        area.innerHTML = '';
+        
+        let logs = [];
+        for(let i=0; i<localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if(key.startsWith('astra_log_')) {
+                logs.push({ date: key.replace('astra_log_', ''), data: JSON.parse(localStorage.getItem(key)) });
+            }
+        }
+        
+        if(logs.length === 0) {
+            area.innerHTML = `<div style="text-align:center; font-size:12px; color:var(--text-muted); padding:20px;">尚無任何旅途日誌紀錄</div>`;
+            return;
+        }
+
+        logs.sort((a,b) => b.date.localeCompare(a.date));
+        const recent = logs[0]; 
+        const weekStr = getWeekDayStr(recent.date);
+
+        const formattedTitleDate = `${recent.date}（${weekStr}）`;
+
+        area.innerHTML = `
+            <div class="recent-banner" onclick="selectedDateStr='${recent.date}'; loadData('${recent.date}'); switchTab('today');">
+                <div class="recent-info">
+                    <div class="recent-date-badge">${formattedTitleDate}</div>
+                    <div class="recent-title-text">${recent.data.title || '未命名旅途'}</div>
+                    <div class="recent-gems-sub">❖ 空：${recent.data.aetherGem || 0} · ❖ 熒：${recent.data.lumineGem || 0}</div>
+                </div>
+                <i class="fa-solid fa-chevron-right" style="color:var(--text-muted); font-size:13px;"></i>
+            </div>
+        `;
+    }
+
+    function addCustomTag() {
+        const input = document.getElementById('custom-tag-input');
+        const val = input.value.trim();
+        if(!val) return;
+
+        const container = document.getElementById('tag-container');
+        const newTag = document.createElement('div');
+        newTag.classList.add('tag', 'selected');
+        newTag.setAttribute('data-val', val);
+        newTag.innerText = val;
+        
+        container.appendChild(newTag);
+        input.value = '';
+    }
+
+    // ==================== 資料持久化運作 ====================
+    function saveData() {
+        const selectedTags = [];
+        document.querySelectorAll('#tag-container .tag.selected').forEach(t => selectedTags.push(t.getAttribute('data-val')));
+        
+        const selectedBuildTags = [];
+        document.querySelectorAll('#build-tags .tag.selected').forEach(t => selectedBuildTags.push(t.getAttribute('data-val')));
+
+        const dayData = {
+            title: document.getElementById('log-title').value,
+            aetherGem: parseInt(document.getElementById('g-aether').value) || 0,
+            lumineGem: parseInt(document.getElementById('g-lumine').value) || 0,
+            tasks: [
+                document.getElementById('task-a-1').checked,
+                document.getElementById('task-a-2').checked,
+                document.getElementById('task-l-1').checked,
+                document.getElementById('task-l-2').checked
+            ],
+            tags: selectedTags,
+            images: uploadedImages,
+            dailyNote: document.getElementById('note-daily').value,
+            storyNote: document.getElementById('note-story').value,
+            favLine: document.getElementById('fav-line').value,
+            favScene: document.getElementById('fav-scene').value,
+            buildTags: selectedBuildTags,
+            buildTarget: document.getElementById('build-target').value,
+            exploreArea: document.getElementById('explore-area').value,
+            explorePercentage: document.getElementById('explore-percentage').value
+        };
+
+        localStorage.setItem(`astra_log_${selectedDateStr}`, JSON.stringify(dayData));
+        alert(`✦ [${selectedDateStr}] 旅途紀錄保存完畢！`);
+        renderCalendar();
+    }
+
+    function loadData(dateStr) {
+        if (dateStr && !dateStr.includes('-') && dateStr.length === 8) {
+            dateStr = `${dateStr.substring(0,4)}-${dateStr.substring(4,6)}-${dateStr.substring(6,8)}`;
+        }
+        selectedDateStr = dateStr;
+        const weekStr = getWeekDayStr(dateStr);
+        document.getElementById('log-date-badge').innerText = `${dateStr} ${weekStr}`;
+
+        const saved = localStorage.getItem(`astra_log_${dateStr}`);
+        
+        document.getElementById('tag-container').innerHTML = `
+            <div class="tag" data-val="魔神任務">魔神任務</div>
+            <div class="tag" data-val="世界任務">世界任務</div>
+            <div class="tag" data-val="邀約任務">邀約任務</div>
+            <div class="tag" data-val="七聖召喚">七聖召喚</div>
+            <div class="tag" data-val="料理">料理</div>
+            <div class="tag" data-val="採集">採集</div>
+            <div class="tag" data-val="練角色">練角色</div>
+            <div class="tag" data-val="塵歌壺">塵歌壺</div>
+            <div class="tag" data-val="探索">探索</div>
+        `;
+
+        if (!saved) {
+            document.getElementById('log-title').value = "新一天的旅途";
+            document.getElementById('g-aether').value = 0;
+            document.getElementById('g-lumine').value = 0;
+            document.getElementById('task-a-1').checked = false;
+            document.getElementById('task-a-2').checked = false;
+            document.getElementById('task-l-1').checked = false;
+            document.getElementById('task-l-2').checked = false;
+            document.getElementById('note-daily').value = "";
+            document.getElementById('note-story').value = "";
+            document.getElementById('fav-line').value = "";
+            document.getElementById('fav-scene').value = "";
+            document.getElementById('build-target').value = "";
+            document.getElementById('explore-area').value = "";
+            document.getElementById('explore-percentage').value = "";
+            document.querySelectorAll('#build-tags .tag').forEach(t => t.classList.remove('selected'));
+            uploadedImages = [];
+            renderPreviews();
+            return;
+        }
+
+        const data = JSON.parse(saved);
+        document.getElementById('log-title').value = data.title || '';
+        document.getElementById('g-aether').value = data.aetherGem || 0;
+        document.getElementById('g-lumine').value = data.lumineGem || 0;
+        document.getElementById('task-a-1').checked = data.tasks?.[0] || false;
+        document.getElementById('task-a-2').checked = data.tasks?.[1] || false;
+        document.getElementById('task-l-1').checked = data.tasks?.[2] || false;
+        document.getElementById('task-l-2').checked = data.tasks?.[3] || false;
+        document.getElementById('note-daily').value = data.dailyNote || '';
+        document.getElementById('note-story').value = data.storyNote || '';
+        document.getElementById('fav-line').value = data.favLine || '';
+        document.getElementById('fav-scene').value = data.favScene || '';
+        document.getElementById('build-target').value = data.buildTarget || '';
+        document.getElementById('explore-area').value = data.exploreArea || '';
+        document.getElementById('explore-percentage').value = data.explorePercentage || '';
+
+        if(data.tags) {
+            const standardPool = ["魔神任務", "世界任務", "邀約任務", "七聖召喚", "料理", "採集", "練角色", "塵歌壺", "探索"];
+            data.tags.forEach(t => {
+                let el = document.querySelector(`#tag-container .tag[data-val="${t}"]`);
+                if(!el && !standardPool.includes(t)) {
+                    el = document.createElement('div');
+                    el.classList.add('tag');
+                    el.setAttribute('data-val', t);
+                    el.innerText = t;
+                    document.getElementById('tag-container').appendChild(el);
+                }
+                if(el) el.classList.add('selected');
+            });
+        }
+
+        document.querySelectorAll('#build-tags .tag').forEach(t => {
+            if(data.buildTags?.includes(t.getAttribute('data-val'))) t.classList.add('selected');
+            else t.classList.remove('selected');
+        });
+
+        uploadedImages = data.images || [];
+        renderPreviews();
+    }
+
+    function deleteCurrentDayLog() {
+        if(confirm(`確定要刪除 [${selectedDateStr}] 的全部日誌嗎？`)) {
+            localStorage.removeItem(`astra_log_${selectedDateStr}`);
+            loadData(selectedDateStr);
+            renderCalendar();
+        }
+    }
+
+    // ==================== 圖片處理 ====================
+    function handleImageUpload(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        const reader = new FileReader();
+        
+        reader.onload = function (e) {
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function () {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 400; 
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                const base64Str = canvas.toDataURL('image/jpeg', 0.65); 
+                
+                uploadedImages.push(base64Str);
+                renderPreviews();
+            };
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function renderPreviews() {
+        const area = document.getElementById('image-preview-area');
+        area.innerHTML = '';
+        uploadedImages.forEach((imgSrc, idx) => {
+            area.innerHTML += `
+                <div class="img-container">
+                    <img src="${imgSrc}">
+                    <button class="img-delete" onclick="deleteImg(${idx})">×</button>
+                </div>`;
+        });
+    }
+
+    function deleteImg(idx) {
+        uploadedImages.splice(idx, 1);
+        renderPreviews();
+    }
+
+    // ==================== 月報分析與原石增減核心 ====================
+    function changeReportMonth(dir) {
+        reportViewDate.setMonth(reportViewDate.getMonth() + dir);
+        calculateReport();
+    }
+
+    function calculateReport() {
+        const year = reportViewDate.getFullYear();
+        const month = reportViewDate.getMonth();
+        const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
+        
+        document.getElementById('report-month-title').innerText = `${year} · ${monthNames[month]}`;
+        const currentYearMonthPrefix = `${year}-${String(month + 1).padStart(2, '0')}`; 
+        
+        let totalLogs = 0;
+        let monthLogs = []; 
+        let tagCounts = {};
+
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key.startsWith('astra_log_')) {
+                totalLogs++;
+                const data = JSON.parse(localStorage.getItem(key));
+                let logDateStr = key.replace('astra_log_', '');
+
+                if (!logDateStr.includes('-') && logDateStr.length === 8) {
+                    logDateStr = `${logDateStr.substring(0,4)}-${logDateStr.substring(4,6)}-${logDateStr.substring(6,8)}`;
+                }
+
+                if (logDateStr.startsWith(currentYearMonthPrefix)) {
+                    monthLogs.push({ date: logDateStr, data: data });
+                    if (data.tags) {
+                        data.tags.forEach(t => tagCounts[t] = (tagCounts[t] || 0) + 1);
+                    }
+                }
+            }
+        }
+
+        let diffAetherText = "空 —";
+        let diffLumineText = "熒 —";
+        let latestAether = 0;
+        let latestLumine = 0;
+
+        if (monthLogs.length > 0) {
+            monthLogs.sort((a, b) => a.date.localeCompare(b.date));
+            
+            const firstLog = monthLogs[0].data;
+            const lastLog = monthLogs[monthLogs.length - 1].data;
+            
+            latestAether = lastLog.aetherGem || 0;
+            latestLumine = lastLog.lumineGem || 0;
+
+            const diffAether = (lastLog.aetherGem || 0) - (firstLog.aetherGem || 0);
+            const diffLumine = (lastLog.lumineGem || 0) - (firstLog.lumineGem || 0);
+
+            diffAetherText = `空 ${diffAether >= 0 ? '+' : ''}${diffAether}`;
+            diffLumineText = `熒 ${diffLumine >= 0 ? '+' : ''}${diffLumine}`;
+        }
+
+        document.getElementById('rep-diff-aether').innerText = diffAetherText;
+        document.getElementById('rep-diff-lumine').innerText = diffLumineText;
+
+        document.getElementById('rep-aether').innerText = latestAether;
+        document.getElementById('rep-lumine').innerText = latestLumine;
+        document.getElementById('rep-total-logs').innerText = totalLogs;
+
+        const start = new Date("2021-01-22");
+        const diffDays = Math.floor((currentSystemDate - start) / (1000 * 60 * 60 * 24));
+        document.getElementById('rep-days').innerText = diffDays;
+
+        const sortedTags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
+        const tagArea = document.getElementById('rep-top-tags');
+        tagArea.innerHTML = '';
+        if (sortedTags.length === 0) {
+            tagArea.innerHTML = `<div style="color:var(--text-muted); font-size:12px;">暫無數據</div>`;
+        } else {
+            sortedTags.forEach(t => {
+                tagArea.innerHTML += `<div class="tag selected">${t} ×${tagCounts[t]}</div>`;
+            });
+        }
+    }
+
+    // ==================== 系統檔案處理 ====================
+    function exportJSON() {
+        const backup = {};
+        for(let i=0; i<localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if(key.startsWith('astra_log_')) backup[key] = localStorage.getItem(key);
+        }
+        const blob = new Blob([JSON.stringify(backup)], {type : 'application/json'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `astrawander_backup_${formatDate(currentSystemDate)}.json`;
+        a.click();
+    }
+
+    function importJSON(input) {
+        if (!input.files || !input.files[0]) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const data = JSON.parse(e.target.result);
+                Object.keys(data).forEach(k => localStorage.setItem(k, data[k]));
+                alert('✦ 備份還原成功！');
+                loadData(selectedDateStr);
+                renderCalendar();
+            } catch(err) {
+                alert('檔案解析錯誤，請確保為正確的備份日誌檔案。');
+            }
+        };
+        reader.readAsText(input.files[0]);
+    }
+
+    function clearAllData() {
+        if(confirm('🚨 警告：這會將本機儲存的所有回憶與照片一次清空！確定刪除嗎？')) {
+            for(let i = localStorage.length - 1; i >= 0; i--) {
+                const key = localStorage.key(i);
+                if(key.startsWith('astra_log_')) localStorage.removeItem(key);
+            }
+            alert('清除完畢。');
+            location.reload();
+        }
+    }
+</script>
+
+</body>
+</html>
